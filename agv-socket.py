@@ -1,35 +1,33 @@
 # coding: utf-8
-#usr/bin/python3
+#!/usr/bin/python3
 
 import socket
 import AStarCsv
 import re
+import logging
+
+logging.basicConfig(level=logging.DEBUG,format="[%(asctime)s] %(name)s:%(levelname)s: %(message)s")
 
 MAX_LENGHT = 1024
 
-agv2IP = "192.168.10.231"
-agv2Port = 10001
+agv2IP = "127.0.0.1"
+agv2Port = 8080
 agvgetpos = 'robot get2dcodepos\r\n'
 #Message = 'robot get2dcodepos\r\n'
 #agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 #agvsock.settimeout(3)
 #agvsock.connect((agv2IP,agv2Port))
-def from_bytes (data, big_endian = False):
-	if isinstance(data, str):
-		data = bytearray(data)
-	if big_endian:
-		data = reversed(data)
-	num = 0
-	for offset, byte in enumerate(data):
-		num += byte << (offset * 8)
-	return num
-
+agv_error_list = ['方向偏离设定值', '直线行驶安全触碰边信号', '调节方向没有找到二维码', '方向调节超时', '陀螺仪出错', '旋转安全触边信号', '旋转时编码器超标', '旋转时陀螺仪超标',
+'空8', '空9', '举升超时', '下降超时', '旋转调整超时', '举升后未检测到二维码', '托盘选超时', '空15',
+'左电机错误', '右电机错误', '旋转电机错误', '举升电机错误', '保留1', '保留2', '保留3', '保留4',]
+agv_status_list = ['standby', 'run', 'finish', 'pause', 'target']
 
 class agv:
 	def __init__(self):
 		self.id = 0
 		self.direct = 0
 		self.battery = 0
+		self.error_list = []
 	def from_bytes(self,data, big_endian = False):
 		if isinstance(data, str):
 			data = bytearray(data)
@@ -41,19 +39,32 @@ class agv:
 		return num
 	def getstatus(self):
 		data = b'\x00\x01\x02\x01\xfd'
+		agv_status_enum = []
 		agvsock.send(data)
 		rec = agvsock.recv(1024)
-		print(rec)
-		self.test()
+		logging.debug('recive form agv: '+(" ".join(map(hex,rec))))
+		#print(" ".join(map(hex,rec)))
+		#print('recive:'+str(rec.hex()))
+		#self.test()
 		#self.from_byte(rec[7:8])
-		self.id = self.from_bytes(rec[7:8])
+		self.id = self.from_bytes(rec[6:8], True) #高位在前需设置big_endian
 		self.direct = self.from_bytes(rec[9:10])
-		self.battery = self.from_bytes(rec[13:14])
-	def test(self):
-		print('ok')
-	
-	
-	
+		self.battery = self.from_bytes(rec[11:12])
+		self.speed = self.from_bytes(rec[8:9])
+		self.dis_ob = self.from_bytes(rec[13:14]) 
+		self.radar_roi = self.from_bytes(rec[14:15]) 
+		self.radar_depth = self.from_bytes(rec[15:16])*10
+		self.agv_status = agv_status_list[rec[12:13]]
+		self.agv_status_error = self.from_bytes(rec[3:6])
+		self.error_list_set()
+	def error_list_set(self):
+		error_code = 0x2CAD #测试 0x2CAD = 0b10110010101101
+		i = 0
+		while error_code > 0:
+			if (error_code & 1) == True:
+				self.error_list.append(agv_error_list[-(i+1)]) #反向	
+			error_code = error_code >> 1
+			i += 1
 #data = agvsock.recvfrom(4096)
 def sendmassage(Message):
 
@@ -102,14 +113,20 @@ def agvgopos(point):
 if __name__ == '__main__':
 	#agvgopos(431)
 	#print(AStarCsv.configpath(AStarCsv.searchpath(134, 426),4))
-	agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-	agvsock.settimeout(3)
-	agvsock.connect((agv2IP,agv2Port))
+#	agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+#	agvsock.settimeout(3)
+#	agvsock.connect((agv2IP,agv2Port))
+#	agv = agv()
+#	agv.getstatus()
+#	logging.debug('current id:'+str(agv.id)+' direct:'+str(agv.direct)+' battery:'+str(agv.battery)+' speed: '+str(agv.speed))
+#	logging.debug('dis : '+str(agv.dis_ob)+' radar_depth: '+str(agv.radar_depth)+' radar_roi: '+str(agv.radar_roi))
+#	logging.debug(agv.error_list)
+#	path,pathex = AStarCsv.configpath(AStarCsv.searchpath(agv.id, 270), agv.direct)
+#	logging.debug('hex path: '+str(" ".join(map(hex,pathex))))
 	agv = agv()
-	agv.getstatus()
-	print(agv.id,agv.direct,agv.battery)
-	path,pathex = AStarCsv.configpath(AStarCsv.searchpath(agv.id, 270), agv.direct)
-	print(pathex)
-	pathb = bytes(pathex)
-	print(pathb)
-	agvsock.send(pathb)
+	agv.error_list_set()
+	logging.debug(agv.error_list)
+	#print(pathex)
+	#pathb = bytes(pathex)
+	#print(pathb)
+	#agvsock.send(pathb)

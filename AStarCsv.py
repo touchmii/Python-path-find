@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 import mapxsl
 import AStar
 import copy
@@ -161,17 +161,17 @@ if __name__ == '__main__':
 	#print(configpath(searchpath(206, 207),4))
 	#test(100)
 	path,pathex = configpath(searchpath(493, 473), 4)
-	print(path)
-	#print(pathex)
-	pathexascii = ''
-	pathexascii2 = ''
-	for i in range(0,len(pathex)):
-		#pathexascii.join(' 0x{:02}'.format(pathex[i]))
-		
-		pathexascii += hex(pathex[i])
-		pathexascii2 += hex(pathex[i])
-		pathexascii += ' '
-	print(pathexascii)
+	print('robot path '+path)
+	print(" ".join(map(hex,pathex)))
+#	pathexascii = ''
+#	pathexascii2 = ''
+#	for i in range(0,len(pathex)):
+#		#pathexascii.join(' 0x{:02}'.format(pathex[i]))
+#		
+#		pathexascii += hex(pathex[i])
+#		pathexascii2 += hex(pathex[i])
+#		pathexascii += ' '
+	#print(pathexascii)
 '''
 	aStar = AStar.AStar(mapTest, AStar.Node(AStar.Point(20,40)), AStar.Node(AStar.Point(7,0)))
 	print("A* start:")
