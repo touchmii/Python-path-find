@@ -10,8 +10,8 @@ logging.basicConfig(level=logging.DEBUG,format="[%(asctime)s] %(name)s:%(levelna
 
 MAX_LENGHT = 1024
 
-agv2IP = "127.0.0.1"
-agv2Port = 8080
+agv2IP = "192.168.10.236"
+agv2Port = 10001
 agvgetpos = 'robot get2dcodepos\r\n'
 #Message = 'robot get2dcodepos\r\n'
 #agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -54,11 +54,11 @@ class agv:
 		self.dis_ob = self.from_bytes(rec[13:14]) 
 		self.radar_roi = self.from_bytes(rec[14:15]) 
 		self.radar_depth = self.from_bytes(rec[15:16])*10
-		self.agv_status = agv_status_list[rec[12:13]]
-		self.agv_status_error = self.from_bytes(rec[3:6])
-		self.error_list_set()
-	def error_list_set(self):
-		error_code = 0x2CAD #测试 0x2CAD = 0b10110010101101
+		#self.agv_status = agv_status_list[int(rec[12:13])]
+		#self.agv_status_error = self.from_bytes(rec[3:6])
+		self.error_list_set(self.from_bytes(rec[3:6]))
+	def error_list_set(self, error_code):
+		##error_code = 0x2CAD #测试 0x2CAD = 0b10110010101101
 		i = 0
 		while error_code > 0:
 			if (error_code & 1) == True:
@@ -113,20 +113,20 @@ def agvgopos(point):
 if __name__ == '__main__':
 	#agvgopos(431)
 	#print(AStarCsv.configpath(AStarCsv.searchpath(134, 426),4))
-#	agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-#	agvsock.settimeout(3)
-#	agvsock.connect((agv2IP,agv2Port))
-#	agv = agv()
-#	agv.getstatus()
-#	logging.debug('current id:'+str(agv.id)+' direct:'+str(agv.direct)+' battery:'+str(agv.battery)+' speed: '+str(agv.speed))
-#	logging.debug('dis : '+str(agv.dis_ob)+' radar_depth: '+str(agv.radar_depth)+' radar_roi: '+str(agv.radar_roi))
-#	logging.debug(agv.error_list)
-#	path,pathex = AStarCsv.configpath(AStarCsv.searchpath(agv.id, 270), agv.direct)
-#	logging.debug('hex path: '+str(" ".join(map(hex,pathex))))
+	agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+	agvsock.settimeout(3)
+	agvsock.connect((agv2IP,agv2Port))
 	agv = agv()
-	agv.error_list_set()
+	agv.getstatus()
+	logging.debug('current id:'+str(agv.id)+' direct:'+str(agv.direct)+' battery:'+str(agv.battery)+' speed: '+str(agv.speed))
+	logging.debug('dis : '+str(agv.dis_ob)+' radar_depth: '+str(agv.radar_depth)+' radar_roi: '+str(agv.radar_roi))
 	logging.debug(agv.error_list)
+	path,pathex = AStarCsv.configpath(AStarCsv.searchpath(agv.id, 270), agv.direct)
+	logging.debug('hex path: '+str(" ".join(map(hex,pathex))))
+#	agv = agv()
+#	agv.error_list_set()
+#	logging.debug(agv.error_list)
 	#print(pathex)
-	#pathb = bytes(pathex)
+	pathb = bytes(pathex)
 	#print(pathb)
-	#agvsock.send(pathb)
+	agvsock.send(pathb)

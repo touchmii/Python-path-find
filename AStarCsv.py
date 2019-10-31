@@ -110,7 +110,7 @@ def configpath(pathb,direct):
 			#elif pp1[0] == 0 or (pp1[1] > 0 and pp2[0] > 0) or (pp1[1] < 0 and pp2[0] < 0):
 			else :
 				path[p] = str(path[p])+'RR'
-				pathex2[-2] = 10
+				pathex2[-2] = 16
 				#pathex2.append(10)
 				#pathex2.append(1)
 	pathex2.append(path[-1]//256)
@@ -160,8 +160,9 @@ if __name__ == '__main__':
 	##构建A*
 	#print(configpath(searchpath(206, 207),4))
 	#test(100)
-	path,pathex = configpath(searchpath(493, 473), 4)
+	path,pathex = configpath(searchpath(210, 290), 2)
 	print('robot path '+path)
+	print(len(pathex))
 	print(" ".join(map(hex,pathex)))
 #	pathexascii = ''
 #	pathexascii2 = ''
