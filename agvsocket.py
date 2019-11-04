@@ -5,8 +5,20 @@ import socket
 import AStarCsv
 import re
 import logging
+from threading import Timer
+import time
+from kivy.app import App
+from kivy.uix.button import Button
 
-logging.basicConfig(level=logging.DEBUG,format="[%(asctime)s] %(name)s:%(levelname)s: %(message)s")
+logger = logging.getLogger('fib')
+logger.setLevel(logging.DEBUG)
+
+hdr = logging.StreamHandler()
+
+formatter = logging.Formatter("[%(asctime)s] %(name)s:%(levelname)s: %(message)s")
+hdr.setFormatter(formatter)
+
+logger.addHandler(hdr)
 
 MAX_LENGHT = 1024
 
@@ -28,6 +40,10 @@ class agv:
 		self.direct = 0
 		self.battery = 0
 		self.error_list = []
+		self.agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+		self.agvsock.settimeout(3)
+		self.agvsock.connect((agv2IP,agv2Port))
+
 	def from_bytes(self,data, big_endian = False):
 		if isinstance(data, str):
 			data = bytearray(data)
@@ -37,12 +53,21 @@ class agv:
 		for offset, byte in enumerate(data):
 			num += byte << (offset * 8)
 		return num
+
+	def go_pos(self,pos):
+		self.getstatus()
+		self.path,self.pathex = AStarCsv.configpath(AStarCsv.searchpath(self.id, pos), self.direct)
+		self.pathb = bytes(self.pathex)
+		self.agvsock.send(self.pathb)
+		self.path_rec = self.agvsock.recv(64)
+		return self.path_rec
+
 	def getstatus(self):
 		data = b'\x00\x01\x02\x01\xfd'
 		agv_status_enum = []
-		agvsock.send(data)
-		rec = agvsock.recv(1024)
-		logging.debug('recive form agv: '+(" ".join(map(hex,rec))))
+		self.agvsock.send(data)
+		rec = self.agvsock.recv(1024)
+		logger.debug('recive form agv: '+(" ".join(map(hex,rec))))
 		#print(" ".join(map(hex,rec)))
 		#print('recive:'+str(rec.hex()))
 		#self.test()
@@ -54,9 +79,11 @@ class agv:
 		self.dis_ob = self.from_bytes(rec[13:14]) 
 		self.radar_roi = self.from_bytes(rec[14:15]) 
 		self.radar_depth = self.from_bytes(rec[15:16])*10
-		#self.agv_status = agv_status_list[int(rec[12:13])]
+		self.agv_status = agv_status_list[int.from_bytes(rec[12:13],"big")]
 		#self.agv_status_error = self.from_bytes(rec[3:6])
 		self.error_list_set(self.from_bytes(rec[3:6]))
+		self.status_overview = 'current id:'+str(self.id)+' direct:'+str(self.direct)+' battery:'+str(self.battery)+' speed: '+str(self.speed)+' agv status: '+self.agv_status+'\n'+'dis stop: '+str(self.dis_ob)+' radar_depth: '+str(self.radar_depth)+' radar_roi: '+str(self.radar_roi)+'\n'+'agv error: '+str(self.error_list)+'\n'
+
 	def error_list_set(self, error_code):
 		##error_code = 0x2CAD #测试 0x2CAD = 0b10110010101101
 		i = 0
@@ -110,27 +137,51 @@ def agvgopos(point):
 			if len(tmp_data) == MAX_LENGHT:
 				tmp_data = ""
 			print(tmp_data)
+
+def status_loop(instance):
+	#print('pressed')
+	#logger.debug('thread')
+	agv.getstatus()
+	logger.debug('current id:'+str(agv.id)+' direct:'+str(agv.direct)+' battery:'+str(agv.battery)+' speed: '+str(agv.speed)+' agv status: '+agv.agv_status)
+	logger.debug('dis stop: '+str(agv.dis_ob)+' radar_depth: '+str(agv.radar_depth)+' radar_roi: '+str(agv.radar_roi))
+	logger.debug('agv error: '+str(agv.error_list))
+	#t=Timer(1.0, lambda: status_loop())
+	#t.start()
+
+class TestApp(App):
+	def build(self):
+		return bt1
+
+
 if __name__ == '__main__':
 	#agvgopos(431)
 	#print(AStarCsv.configpath(AStarCsv.searchpath(134, 426),4))
-	agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-	agvsock.settimeout(3)
-	agvsock.connect((agv2IP,agv2Port))
+#	agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+#	agvsock.settimeout(3)
+#	agvsock.connect((agv2IP,agv2Port))
 	agv = agv()
 	agv.getstatus()
-	logging.debug('current id:'+str(agv.id)+' direct:'+str(agv.direct)+' battery:'+str(agv.battery)+' speed: '+str(agv.speed))
-	logging.debug('dis : '+str(agv.dis_ob)+' radar_depth: '+str(agv.radar_depth)+' radar_roi: '+str(agv.radar_roi))
-	logging.debug(agv.error_list)
-	path,pathex = AStarCsv.configpath(AStarCsv.searchpath(agv.id, 825), agv.direct)
-	logging.debug('hex path: '+str(" ".join(map(hex,pathex))))
+	logging.debug('current id:'+str(agv.id)+' direct:'+str(agv.direct)+' battery:'+str(agv.battery)+' speed: '+str(agv.speed)+' agv status: '+agv.agv_status)
+	logging.debug('dis stop: '+str(agv.dis_ob)+' radar_depth: '+str(agv.radar_depth)+' radar_roi: '+str(agv.radar_roi))
+	logging.debug('agv error: '+str(agv.error_list))
+	#path,pathex = AStarCsv.configpath(AStarCsv.searchpath(agv.id, 161), agv.direct)
+	#logging.debug('hex path: '+str(" ".join(map(hex,pathex))))
 #	agv = agv()
 #	agv.error_list_set()
 #	logging.debug(agv.error_list)
 	#print(pathex)
-	pathb = bytes(pathex)
-	logging.debug('path length: '+str(len(pathex)))
-	agvsock.send(pathb)
+	#pathb = bytes(pathex)
+	#logging.debug('path length: '+str(len(pathex)))
+	#agvsock.send(pathb)
 	
-	rec = agvsock.recv(1024)
-	logging.debug('recive form agv path response: '+(" ".join(map(hex,rec))))
-	agvsock.close()
+	#rec = agvsock.recv(1024)
+	#logging.debug('recive form agv path response: '+(" ".join(map(hex,rec))))
+	
+	#t=Timer(1.0, lambda: status_loop())
+	#t.start()
+	#bt1 = Button(text='get status', pos=(300,350), size_hint = (.25, .18))
+	#bt1.bind(on_press=status_loop)
+	#TestApp().run()
+	rec = agv.go_pos(230)
+	print(rec)
+	agv.agvsock.close()
