@@ -3,6 +3,9 @@ from __future__ import print_function
 #import csv
 import xlrd
 import copy
+import os
+
+path = os.path.dirname(__file__)
 
 class mapcsv:
 	def __init__(self):
@@ -12,9 +15,11 @@ class mapcsv:
 		self.path = []
 		#agvfile = open("AGV-Route.csv")
 		#reader = csv.reader(agvfile)
-		agvfile = xlrd.open_workbook(filename='./AGV线路图-2019-10.11.xlsx')
+		agvfile = xlrd.open_workbook(filename=path+'/AGV线路图-2019-10.11.xlsx')
 		sheet = agvfile.sheet_by_index(0)
+		sheet2 = agvfile.sheet_by_index(2)
 		self.data = []
+		self.pointbk = []
 		for x in range(0,self.h):
 			row = sheet.row_values(x)
 			for item in range(len(row)-1,-1,-1):
@@ -25,6 +30,15 @@ class mapcsv:
 			row = list(map(int,row))
 			self.data.append(row)
 			##print(row)
+		for x in range(0,3):
+			row = sheet2.row_values(x)
+			#print(row)
+			#for item in range(len(row)-1,-1,-1):
+			row = list(map(int,row))
+			self.pointbk.extend(row)
+		self.pointbk.sort()
+		self.pointbk = self.pointbk[23:]
+		#print(self.pointbk)
 		self.databack = copy.deepcopy(self.data)
 		
 	def showMap(self):

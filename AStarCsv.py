@@ -5,6 +5,8 @@ import copy
 import numpy as np
 import operator
 import os
+#from threading import Timer
+#import time
 #import numba
 
 mapTest = mapxsl.mapcsv();
@@ -42,9 +44,11 @@ def searchpath(start,end):
 	aStar.pathpoint = list(filter(lambda x : x!=0,aStar.pathpoint))
 	#print(aStar.pathpoint)
 	return aStar.pathpoint;
-def configpath(pathb,direct):
+#十六进制最大发送60多个二维码210->289 ,字节数254
+def configpath(pathb,direct,endir = 0, back = True, maxlen = 60):
 	pathex = bytearray(b'\x00\x01\x0c')
 	pathex2 = bytearray(b'\x00\x00\x01\x01')
+	pathex3 = bytearray(b'\x00\x00\x02\x02')
 	path = pathb
 	patha = copy.deepcopy(pathb)
 	#print(path)
@@ -62,6 +66,9 @@ def configpath(pathb,direct):
 		pathex2.append(path[p]%256)
 		pathex2.append(0)
 		pathex2.append(1)
+		
+		if len(pathex2) > 59*4:
+			pass
 		#print(pathex2)
 		p2 = Find(patha[p],mapTest.databack)
 		p3 = Find(patha[p+1],mapTest.databack)
@@ -110,7 +117,7 @@ def configpath(pathb,direct):
 			#elif pp1[0] == 0 or (pp1[1] > 0 and pp2[0] > 0) or (pp1[1] < 0 and pp2[0] < 0):
 			else :
 				path[p] = str(path[p])+'RR'
-				pathex2[-2] = 16
+				pathex2[-2] = 16 #0x10
 				#pathex2.append(10)
 				#pathex2.append(1)
 	pathex2.append(path[-1]//256)
@@ -122,6 +129,26 @@ def configpath(pathb,direct):
 	pathex.append(len(pathex2)%256)
 	pathex += pathex2
 	#check = bytes(0)
+	# 定位桩倒退参数默认开启，判断倒数第一个码是否在列表pointbk里面，对倒数第二个码动作修改
+	if back == True:
+		print(mapTest.pointbk) #列表第一位元素为101导致index（101）无法正常执行
+		try:
+			if mapTest.pointbk.index(path[-1]):
+				if path[-1] == 571:
+					path[-2] = '570BR'
+					#print(pathex[-6])
+					pathex[-6] = 0x22
+				elif path[-1] == 729:
+					path[-2] = '729BL'
+					pathex[-6] = 0x21
+				else:
+					path[-2] = str(path[-2])+'BB'
+					pathex[-6] = 0x20
+		#except ValueError as error:
+		except Exception as e:
+			pass
+			#print(e)
+		#continue
 	check = 0
 	for i in range(0,len(pathex)):
 		#check = bytes(map(operator.xor, bytes(pathex[i]), check))
@@ -160,7 +187,7 @@ if __name__ == '__main__':
 	##构建A*
 	#print(configpath(searchpath(206, 207),4))
 	#test(100)
-	path,pathex = configpath(searchpath(210, 290), 2)
+	path,pathex = configpath(searchpath(210, 101), 4)
 	print('robot path '+path)
 	print(len(pathex))
 	print(" ".join(map(hex,pathex)))
