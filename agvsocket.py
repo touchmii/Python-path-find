@@ -40,9 +40,12 @@ class agv:
 		self.direct = 0
 		self.battery = 0
 		self.error_list = []
+	def connect(self, ip, port):
 		self.agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 		self.agvsock.settimeout(3)
-		self.agvsock.connect((agv2IP,agv2Port))
+		self.agvsock.connect((ip,port))
+	def disconect(self):
+		self.agvsock.close()
 
 	def from_bytes(self,data, big_endian = False):
 		if isinstance(data, str):
@@ -53,7 +56,13 @@ class agv:
 		for offset, byte in enumerate(data):
 			num += byte << (offset * 8)
 		return num
-
+	def action(self,*action):
+		data = AStarCsv.action(*action)
+		self.debug(data)
+		self.agvsock.send(data)
+		rec = self.agvsock.recv(64)
+		self.debug(rec)
+		return rec
 	def go_pos(self,pos):
 		self.getstatus()
 		self.path,self.pathex = AStarCsv.configpath(AStarCsv.searchpath(self.id, pos), self.direct)
@@ -66,7 +75,11 @@ class agv:
 		data = b'\x00\x01\x02\x01\xfd'
 		agv_status_enum = []
 		self.agvsock.send(data)
-		rec = self.agvsock.recv(1024)
+		#rec = self.agvsock.recv(1024)
+		#try:
+		rec = self.agvsock.recv(64)
+		#except Exception:
+			#continue
 		logger.debug('recive form agv: '+(" ".join(map(hex,rec))))
 		#print(" ".join(map(hex,rec)))
 		#print('recive:'+str(rec.hex()))
@@ -92,6 +105,8 @@ class agv:
 				self.error_list.append(agv_error_list[-(i+1)]) #反向	
 			error_code = error_code >> 1
 			i += 1
+	def debug(self, rec):
+		logger.debug('recive form agv: '+(" ".join(map(hex,rec))))
 #data = agvsock.recvfrom(4096)
 def sendmassage(Message):
 

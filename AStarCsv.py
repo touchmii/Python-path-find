@@ -161,7 +161,43 @@ def configpath(pathb,direct,endir = 0, back = True, maxlen = 60):
 	#check = operator.invert(check)
 	path = '->'.join(str(i) for i in path)
 	#print(pathex)
-	return path,pathex;	
+	return path,pathex;
+	
+def action(*action):
+	if action[0] == 'pause':
+		data = bytearray(b'\x00\x01\x06\x00\x02\x00\x00')
+		return check(data)
+	elif action[0] == 'resume':
+		data = bytearray(b'\x00\x01\x05\x00\x02\x00\x01')
+		return check(data)
+	elif action[0] == 'liftup':
+		data = bytearray(b'\x00\x01\x0d\x00\x02\x02\x00')
+		return check(data)
+	elif action[0] == 'liftdown':
+		data = bytearray(b'\x00\x01\x0d\x00\x02\x03\x00')
+		return check(data)
+	elif action[0] == 'charge':
+		data = bytearray(b'\x00\x01\x03\x00\x02\x02\x00')
+		return check(data)
+	elif action[0] == 'discharge':
+		data = bytearray(b'\x00\x01\x03\x00\x02\x03\x00')
+		return check(data)
+	elif action[0] == 'radar' and len(action) == 4:
+		data= bytearray(b'\x00\x01\x04\x00\x03')
+		data.append(int(action[1]))
+		data.append(int(action[2]))
+		data.append(int(action[3])//10)
+		return check(data)
+	else:
+		return 'not find action'
+def check(data):
+	check = 0
+	for i in range(0, len(data)):
+		check = check ^ data[i]
+	check = ~check & 0xFF
+	#print(check)
+	data.append(check)
+	return data
 '''class Solution:
 	# array 二维列表
 	def Find(array, target):
@@ -200,6 +236,9 @@ if __name__ == '__main__':
 #		pathexascii2 += hex(pathex[i])
 #		pathexascii += ' '
 	#print(pathexascii)
+	
+	action = action('radar',136,80,80)
+	print(" ".join(map(hex,action)))
 '''
 	aStar = AStar.AStar(mapTest, AStar.Node(AStar.Point(20,40)), AStar.Node(AStar.Point(7,0)))
 	print("A* start:")
