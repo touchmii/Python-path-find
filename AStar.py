@@ -21,6 +21,7 @@ class Node:
 	 """
 	def manhattan(self, endNode):
 		self.h = (abs(endNode.point.x - self.point.x) + abs(endNode.point.y - self.point.y))*10 
+		#self.h = (abs(endNode.point.x - self.point.x) + abs(endNode.point.y - self.point.y)) 
 	
 	def setG(self, g):
 		self.g = g
@@ -107,10 +108,14 @@ class AStar:
 		if self.nodeInCloselist(node):  
 			return  
 		#G值计算 
-		if abs(node.point.x - self.currentNode.point.x) == 1 and abs(node.point.y - self.currentNode.point.y) == 1:  
-			gTemp = 25  
-		else:  
-			gTemp = 10  
+#		if abs(node.point.x - self.currentNode.point.x) == 1 and abs(node.point.y - self.currentNode.point.y) == 1:  
+#			gTemp = 25  
+#		else:  
+#			gTemp = 10  
+		if self.map2d.isSpace(node.point):
+			gTemp = 0
+		else:
+			gTemp = 10
 
 
 		#如果不再openList中，就加入openlist  
@@ -138,28 +143,28 @@ class AStar:
 		(x  ,y-1)(x  ,y)(x  ,y+1)
 		(x+1,y-1)(x+1,y)(x+1,y+1)
 		""" 
-		if self.map2d.isPass(Point(self.currentNode.point.x - 1, self.currentNode.point.y)) and \
-		self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y -1)):
-			self.searchOneNode(Node(Point(self.currentNode.point.x - 1, self.currentNode.point.y - 1)))
+#		if self.map2d.isPass(Point(self.currentNode.point.x - 1, self.currentNode.point.y)) and \
+#		self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y -1)):
+#			self.searchOneNode(Node(Point(self.currentNode.point.x - 1, self.currentNode.point.y - 1)))
 		
 		self.searchOneNode(Node(Point(self.currentNode.point.x - 1, self.currentNode.point.y)))
 
-		if self.map2d.isPass(Point(self.currentNode.point.x - 1, self.currentNode.point.y)) and \
-		self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y + 1)):
-			self.searchOneNode(Node(Point(self.currentNode.point.x - 1, self.currentNode.point.y + 1)))
+#		if self.map2d.isPass(Point(self.currentNode.point.x - 1, self.currentNode.point.y)) and \
+#		self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y + 1)):
+#			self.searchOneNode(Node(Point(self.currentNode.point.x - 1, self.currentNode.point.y + 1)))
 
 		self.searchOneNode(Node(Point(self.currentNode.point.x, self.currentNode.point.y - 1)))
 		self.searchOneNode(Node(Point(self.currentNode.point.x, self.currentNode.point.y + 1)))
 
-		if self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y - 1)) and \
-		self.map2d.isPass(Point(self.currentNode.point.x + 1, self.currentNode.point.y)):
-			self.searchOneNode(Node(Point(self.currentNode.point.x + 1, self.currentNode.point.y - 1)))
+#		if self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y - 1)) and \
+#		self.map2d.isPass(Point(self.currentNode.point.x + 1, self.currentNode.point.y)):
+#			self.searchOneNode(Node(Point(self.currentNode.point.x + 1, self.currentNode.point.y - 1)))
 		
 		self.searchOneNode(Node(Point(self.currentNode.point.x + 1, self.currentNode.point.y)))
 
-		if self.map2d.isPass(Point(self.currentNode.point.x + 1, self.currentNode.point.y)) and \
-		self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y + 1)):
-			self.searchOneNode(Node(Point(self.currentNode.point.x + 1, self.currentNode.point.y + 1)))
+#		if self.map2d.isPass(Point(self.currentNode.point.x + 1, self.currentNode.point.y)) and \
+#		self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y + 1)):
+#			self.searchOneNode(Node(Point(self.currentNode.point.x + 1, self.currentNode.point.y + 1)))
 		return;
 
 	def start(self):

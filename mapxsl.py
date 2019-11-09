@@ -57,6 +57,9 @@ class mapcsv:
 			return False;
 		if (self.data[point.x][point.y] > 100) or (self.data[point.x][point.y] == 0):
 			return True;
+	def isSpace(self, point):
+		if self.data[point.x][point.y] == 0:
+			return True;
 
 if __name__ == '__main__':
 	map = mapcsv();
