@@ -95,7 +95,7 @@ class AStar:
 				return nodeTmp  
 		return None
 
-	def searchOneNode(self,node):
+	def searchOneNode(self, node, fixg):
 		""" 
 		搜索一个节点
 		x为是行坐标
@@ -115,7 +115,7 @@ class AStar:
 		if self.map2d.isSpace(node.point):
 			gTemp = 0
 		else:
-			gTemp = 10
+			gTemp = fixg
 
 
 		#如果不再openList中，就加入openlist  
@@ -147,20 +147,20 @@ class AStar:
 #		self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y -1)):
 #			self.searchOneNode(Node(Point(self.currentNode.point.x - 1, self.currentNode.point.y - 1)))
 		
-		self.searchOneNode(Node(Point(self.currentNode.point.x - 1, self.currentNode.point.y)))
+		self.searchOneNode(Node(Point(self.currentNode.point.x - 1, self.currentNode.point.y)), self.map2d.direct_g(self.currentNode.point, 2))
 
 #		if self.map2d.isPass(Point(self.currentNode.point.x - 1, self.currentNode.point.y)) and \
 #		self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y + 1)):
 #			self.searchOneNode(Node(Point(self.currentNode.point.x - 1, self.currentNode.point.y + 1)))
 
-		self.searchOneNode(Node(Point(self.currentNode.point.x, self.currentNode.point.y - 1)))
-		self.searchOneNode(Node(Point(self.currentNode.point.x, self.currentNode.point.y + 1)))
+		self.searchOneNode(Node(Point(self.currentNode.point.x, self.currentNode.point.y - 1)), self.map2d.direct_g(self.currentNode.point, 3))
+		self.searchOneNode(Node(Point(self.currentNode.point.x, self.currentNode.point.y + 1)), self.map2d.direct_g(self.currentNode.point, 1))
 
 #		if self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y - 1)) and \
 #		self.map2d.isPass(Point(self.currentNode.point.x + 1, self.currentNode.point.y)):
 #			self.searchOneNode(Node(Point(self.currentNode.point.x + 1, self.currentNode.point.y - 1)))
 		
-		self.searchOneNode(Node(Point(self.currentNode.point.x + 1, self.currentNode.point.y)))
+		self.searchOneNode(Node(Point(self.currentNode.point.x + 1, self.currentNode.point.y)), self.map2d.direct_g(self.currentNode.point, 0))
 
 #		if self.map2d.isPass(Point(self.currentNode.point.x + 1, self.currentNode.point.y)) and \
 #		self.map2d.isPass(Point(self.currentNode.point.x, self.currentNode.point.y + 1)):
