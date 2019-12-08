@@ -1,6 +1,7 @@
+# coding: utf-8
 #!/usr/bin/python3
 #import mapxsl
-import mapxslfast as mapxsl
+import mapxsl2 as mapxsl
 import AStar
 import copy
 import numpy as np
@@ -251,21 +252,24 @@ def check(data):
 			else:
 				return False
 '''
+
+def get_point():
+	return mapTest.pointdic
 def test(time = 1):
 	for i in range(0,time):
-		path,pathex = configpath(searchpath(216, 752), 2)
+		path,pathex = configpath(searchpath(208, 206), 2)
 		#print('time .')
 if __name__ == '__main__':
 	##构建地图
 	#mapTest = mapxsl.mapcsv();
-	##mapTest.showMap();
+	mapTest.showMap();
 	##构建A*
 	#print(configpath(searchpath(206, 207),4))
 	#test(100)
 	#path,pathex = configpath(searchpath(447, 447), 4)
 	start = time.time()
 	print(time)
-	path,pathex = configpath(searchpath(208, 206), 4)
+	path,pathex = configpath(searchpath(117, 107), 4)
 	print('robot path '+path)
 	# print(len(pathex))
 	end = time.time()

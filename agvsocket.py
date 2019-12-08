@@ -9,6 +9,7 @@ from threading import Timer
 import time
 from kivy.app import App
 from kivy.uix.button import Button
+import asyncio
 
 logger = logging.getLogger('fib')
 logger.setLevel(logging.DEBUG)
@@ -22,7 +23,7 @@ logger.addHandler(hdr)
 
 MAX_LENGHT = 1024
 
-agv2IP = "192.168.10.236"
+agv2IP = "192.168.0.157"
 agv2Port = 10001
 agvgetpos = 'robot get2dcodepos\r\n'
 #Message = 'robot get2dcodepos\r\n'
@@ -40,13 +41,43 @@ class agv:
 		self.direct = 0
 		self.battery = 0
 		self.error_list = []
+		self.agvsock = None
+		self.id = None
+		self.direct = None
+		self.battery = None
+		self.speed = None
+		self.dis_ob = None 
+		self.radar_roi = None 
+		self.radar_depth = None
+		self.agv_status = None
+		self.agv_status_error = None
+		self.status_overview = ''
 	def connect(self, ip, port):
 		self.agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-		self.agvsock.settimeout(3)
-		self.agvsock.connect((ip,port))
+		self.agvsock.settimeout(5)
+		try:
+			self.agvsock.connect((ip,port))
+		except socket.error:
+			logger.debug('socket cant connect')
+			self.agvsock.close()
+			return 'socket cant connect'
+		return 'socket connected'
 	def disconect(self):
-		self.agvsock.close()
-
+		if self.agvsock:
+			self.agvsock.close()
+		self.agvsock = None
+	def send_message(self,message):
+		if not self.agvsock:
+			return None
+		try:
+			self.agvsock.send(message)
+			rec = self.agvsock.recv(64)
+			return rec
+		except socket.error:
+			logger.debug('socket error')
+		finally:
+			pass
+			#self.agvsock.close()
 	def from_bytes(self,data, big_endian = False):
 		if isinstance(data, str):
 			data = bytearray(data)
@@ -58,27 +89,38 @@ class agv:
 		return num
 	def action(self,*action):
 		data = AStarCsv.action(*action)
-		self.debug(data)
-		self.agvsock.send(data)
-		rec = self.agvsock.recv(64)
+		self.debug(data, 'send to agv: ')
+		#self.agvsock.send(data)
+		rec = self.send_message(data)
+		if not rec:
+			return None
 		self.debug(rec)
 		return rec
 	def go_pos(self,pos):
 		self.getstatus()
+		self.getstatus()
+		if not self.id:
+			return None
 		self.path,self.pathex = AStarCsv.configpath(AStarCsv.searchpath(self.id, pos), self.direct)
 		self.pathb = bytes(self.pathex)
-		self.agvsock.send(self.pathb)
-		self.path_rec = self.agvsock.recv(64)
-		return self.path_rec
+		# self.agvsock.send(self.pathb)
+		logger.debug('send path to agv: '+self.path)
+		rec = self.send_message(self.pathb)
+		#self.path_rec = self.agvsock.recv(64)
+		#return self.path_rec
+		return rec
 
 	def getstatus(self):
 		data = b'\x00\x01\x02\x01\xfd'
-		agv_status_enum = []
-		self.agvsock.send(data)
+		#agv_status_enum = []
+		#self.agvsock.send(data)
 		#rec = self.agvsock.recv(1024)
 		#try:
-		rec = self.agvsock.recv(64)
-		#except Exception:
+		#rec = self.agvsock.recv(64)
+		rec = self.send_message(data)    #except Exception:
+		if not rec:
+			return
+		print(rec)
 			#continue
 		logger.debug('recive form agv: '+(" ".join(map(hex,rec))))
 		#print(" ".join(map(hex,rec)))
@@ -105,8 +147,8 @@ class agv:
 				self.error_list.append(agv_error_list[-(i+1)]) #反向	
 			error_code = error_code >> 1
 			i += 1
-	def debug(self, rec):
-		logger.debug('recive form agv: '+(" ".join(map(hex,rec))))
+	def debug(self, rec, prompt='recive from gav: '):
+		logger.debug(prompt+(" ".join(map(hex,rec))))
 #data = agvsock.recvfrom(4096)
 def sendmassage(Message):
 
@@ -167,6 +209,36 @@ class TestApp(App):
 	def build(self):
 		return bt1
 
+async def path_test():
+	while 1:
+		await go_pos(122)
+		await go_pos(107)
+		await go_pos(541)
+		await go_pos(169)
+		await go_pos(192)
+		await go_pos(541)
+		await go_pos(195)
+#		target_id = pointbk[0]
+#		target_id = 192
+#		print(agv.go_pos(target_id))
+#		await asyncio.sleep(1)
+#		while 1:
+#			await asyncio.sleep(.5)
+#			agv.getstatus()
+#			if agv.id == target_id and agv.agv_status == 'standby':
+#				await asyncio.sleep(.5)
+#				break
+#		target_id = pointbk[3]
+async def go_pos(target_pos):
+	target_id = target_pos
+	print(agv.go_pos(target_id))
+	await asyncio.sleep(1)
+	while 1:
+		await asyncio.sleep(.5)
+		agv.getstatus()
+		if agv.id == target_id and agv.agv_status == 'standby':
+			await asyncio.sleep(1)
+			break
 
 if __name__ == '__main__':
 	#agvgopos(431)
@@ -174,11 +246,24 @@ if __name__ == '__main__':
 #	agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 #	agvsock.settimeout(3)
 #	agvsock.connect((agv2IP,agv2Port))
+	current_id = 0
+	target_id = 0
+#	pointbk = AStarCsv.get_point()
+	pointbk = {192:0, 152:0, 107:0, 173:0}
 	agv = agv()
+	agv.connect(agv2IP, agv2Port)
 	agv.getstatus()
-	logging.debug('current id:'+str(agv.id)+' direct:'+str(agv.direct)+' battery:'+str(agv.battery)+' speed: '+str(agv.speed)+' agv status: '+agv.agv_status)
-	logging.debug('dis stop: '+str(agv.dis_ob)+' radar_depth: '+str(agv.radar_depth)+' radar_roi: '+str(agv.radar_roi))
-	logging.debug('agv error: '+str(agv.error_list))
+	if agv.id == 0:
+		sys.exit("sorry, goodbye!")
+	else:
+		current_id = agv.id
+	
+	loop = asyncio.get_event_loop()
+	tasks = [asyncio.Task(path_test())]
+	loop.run_until_complete(asyncio.wait(tasks))
+#	logging.debug('current id:'+str(agv.id)+' direct:'+str(agv.direct)+' battery:'+str(agv.battery)+' speed: '+str(agv.speed)+' agv status: '+agv.agv_status)
+#	logging.debug('dis stop: '+str(agv.dis_ob)+' radar_depth: '+str(agv.radar_depth)+' radar_roi: '+str(agv.radar_roi))
+#	logging.debug('agv error: '+str(agv.error_list))
 	#path,pathex = AStarCsv.configpath(AStarCsv.searchpath(agv.id, 161), agv.direct)
 	#logging.debug('hex path: '+str(" ".join(map(hex,pathex))))
 #	agv = agv()
@@ -197,6 +282,6 @@ if __name__ == '__main__':
 	#bt1 = Button(text='get status', pos=(300,350), size_hint = (.25, .18))
 	#bt1.bind(on_press=status_loop)
 	#TestApp().run()
-	rec = agv.go_pos(230)
-	print(rec)
-	agv.agvsock.close()
+	#rec = agv.go_pos(230)
+	#print(rec)
+	#agv.agvsock.close()
