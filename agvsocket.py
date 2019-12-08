@@ -7,8 +7,8 @@ import re
 import logging
 from threading import Timer
 import time
-from kivy.app import App
-from kivy.uix.button import Button
+#from kivy.app import App
+#from kivy.uix.button import Button
 import asyncio
 
 logger = logging.getLogger('fib')
@@ -24,6 +24,7 @@ logger.addHandler(hdr)
 MAX_LENGHT = 1024
 
 agv2IP = "192.168.0.157"
+#agv2IP = "127.0.0.1"
 agv2Port = 10001
 agvgetpos = 'robot get2dcodepos\r\n'
 #Message = 'robot get2dcodepos\r\n'
@@ -75,6 +76,7 @@ class agv:
 			return rec
 		except socket.error:
 			logger.debug('socket error')
+			return -1
 		finally:
 			pass
 			#self.agvsock.close()
@@ -98,14 +100,17 @@ class agv:
 		return rec
 	def go_pos(self,pos):
 		self.getstatus()
-		self.getstatus()
-		if not self.id:
-			return None
+#		rec = self.getstatus()
+#		if not self.id:
+		if self.getstatus() == -1:
+			return -1
 		self.path,self.pathex = AStarCsv.configpath(AStarCsv.searchpath(self.id, pos), self.direct)
 		self.pathb = bytes(self.pathex)
 		# self.agvsock.send(self.pathb)
 		logger.debug('send path to agv: '+self.path)
 		rec = self.send_message(self.pathb)
+		self.response_check(rec)
+#		logger.debug('path response form agv: '+(" ".join(map(hex,rec))))
 		#self.path_rec = self.agvsock.recv(64)
 		#return self.path_rec
 		return rec
@@ -118,15 +123,22 @@ class agv:
 		#try:
 		#rec = self.agvsock.recv(64)
 		rec = self.send_message(data)    #except Exception:
-		if not rec:
-			return
-		print(rec)
+#		if not rec:
+#			return
+#		elif len(rec) < 18:
+#			return
+		return self.response_check(rec)
+#		print(rec)
 			#continue
-		logger.debug('recive form agv: '+(" ".join(map(hex,rec))))
+#		logger.debug('recive form agv: '+(" ".join(map(hex,rec))))
 		#print(" ".join(map(hex,rec)))
 		#print('recive:'+str(rec.hex()))
 		#self.test()
 		#self.from_byte(rec[7:8])
+	def response_check(self, rec):
+		if rec == -1 or len(rec) < 18 or rec[:3] != b'\x00\x01\x82':
+			logger.error('recive form agv: '+(" ".join(map(hex,rec))))
+			return -1
 		self.id = self.from_bytes(rec[6:8], True) #高位在前需设置big_endian
 		self.direct = self.from_bytes(rec[9:10])
 		self.battery = self.from_bytes(rec[11:12])
@@ -138,7 +150,8 @@ class agv:
 		#self.agv_status_error = self.from_bytes(rec[3:6])
 		self.error_list_set(self.from_bytes(rec[3:6]))
 		self.status_overview = 'current id:'+str(self.id)+' direct:'+str(self.direct)+' battery:'+str(self.battery)+' speed: '+str(self.speed)+' agv status: '+self.agv_status+'\n'+'dis stop: '+str(self.dis_ob)+' radar_depth: '+str(self.radar_depth)+' radar_roi: '+str(self.radar_roi)+'\n'+'agv error: '+str(self.error_list)+'\n'
-
+		logger.debug('agv status check'+self.status_overview)
+		return 0
 	def error_list_set(self, error_code):
 		##error_code = 0x2CAD #测试 0x2CAD = 0b10110010101101
 		i = 0
@@ -205,9 +218,9 @@ def status_loop(instance):
 	#t=Timer(1.0, lambda: status_loop())
 	#t.start()
 
-class TestApp(App):
-	def build(self):
-		return bt1
+#class TestApp(App):
+#	def build(self):
+#		return bt1
 
 async def path_test():
 	while 1:
@@ -230,8 +243,13 @@ async def path_test():
 #				break
 #		target_id = pointbk[3]
 async def go_pos(target_pos):
+	logger.debug('go to new pos')
 	target_id = target_pos
-	print(agv.go_pos(target_id))
+	rec = agv.go_pos(target_id)
+	if rec == -1:
+#		print('resend path')
+		logger.error('resend path')
+		rec = agv.go_pos(target_id)
 	await asyncio.sleep(1)
 	while 1:
 		await asyncio.sleep(.5)
