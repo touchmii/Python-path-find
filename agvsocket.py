@@ -5,11 +5,17 @@ import socket
 import AStarCsv
 import re
 import logging
+import logg
 from threading import Timer
 import time
 #from kivy.app import App
 #from kivy.uix.button import Button
 import asyncio
+<<<<<<< HEAD
+
+log = logg.Logger('all.log',level='debug')
+=======
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 
 logger = logging.getLogger('fib')
 logger.setLevel(logging.DEBUG)
@@ -23,7 +29,12 @@ logger.addHandler(hdr)
 
 MAX_LENGHT = 1024
 
+<<<<<<< HEAD
+#agv2IP = "192.168.0.157"
+agv2IP = "192.168.10.239"
+=======
 agv2IP = "192.168.0.157"
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 #agv2IP = "127.0.0.1"
 agv2Port = 10001
 agvgetpos = 'robot get2dcodepos\r\n'
@@ -44,6 +55,11 @@ class agv:
 		self.error_list = []
 		self.agvsock = None
 		self.id = None
+<<<<<<< HEAD
+		self.pre_id = 99
+		
+=======
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 		self.direct = None
 		self.battery = None
 		self.speed = None
@@ -53,13 +69,21 @@ class agv:
 		self.agv_status = None
 		self.agv_status_error = None
 		self.status_overview = ''
+<<<<<<< HEAD
+		self.recive_data = b''
+=======
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 	def connect(self, ip, port):
 		self.agvsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 		self.agvsock.settimeout(5)
 		try:
 			self.agvsock.connect((ip,port))
 		except socket.error:
+<<<<<<< HEAD
+			log.logger.error('socket cant connect')
+=======
 			logger.debug('socket cant connect')
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 			self.agvsock.close()
 			return 'socket cant connect'
 		return 'socket connected'
@@ -107,7 +131,11 @@ class agv:
 		self.path,self.pathex = AStarCsv.configpath(AStarCsv.searchpath(self.id, pos), self.direct)
 		self.pathb = bytes(self.pathex)
 		# self.agvsock.send(self.pathb)
+<<<<<<< HEAD
+		log.logger.info('send path to agv: '+self.path)
+=======
 		logger.debug('send path to agv: '+self.path)
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 		rec = self.send_message(self.pathb)
 		self.response_check(rec)
 #		logger.debug('path response form agv: '+(" ".join(map(hex,rec))))
@@ -137,8 +165,18 @@ class agv:
 		#self.from_byte(rec[7:8])
 	def response_check(self, rec):
 		if rec == -1 or len(rec) < 18 or rec[:3] != b'\x00\x01\x82':
+<<<<<<< HEAD
+			log.logger.error('recive form agv: '+(" ".join(map(hex,rec))))
+			return -1
+		if rec == self.recive_data:
+			return 0
+		self.recive_data = rec
+#		if self.pre_id != self.id:
+#			self.pre_id = self.id
+=======
 			logger.error('recive form agv: '+(" ".join(map(hex,rec))))
 			return -1
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 		self.id = self.from_bytes(rec[6:8], True) #高位在前需设置big_endian
 		self.direct = self.from_bytes(rec[9:10])
 		self.battery = self.from_bytes(rec[11:12])
@@ -150,7 +188,11 @@ class agv:
 		#self.agv_status_error = self.from_bytes(rec[3:6])
 		self.error_list_set(self.from_bytes(rec[3:6]))
 		self.status_overview = 'current id:'+str(self.id)+' direct:'+str(self.direct)+' battery:'+str(self.battery)+' speed: '+str(self.speed)+' agv status: '+self.agv_status+'\n'+'dis stop: '+str(self.dis_ob)+' radar_depth: '+str(self.radar_depth)+' radar_roi: '+str(self.radar_roi)+'\n'+'agv error: '+str(self.error_list)+'\n'
+<<<<<<< HEAD
+		log.logger.debug('agv status check:'+self.status_overview)
+=======
 		logger.debug('agv status check'+self.status_overview)
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 		return 0
 	def error_list_set(self, error_code):
 		##error_code = 0x2CAD #测试 0x2CAD = 0b10110010101101
@@ -224,6 +266,33 @@ def status_loop(instance):
 
 async def path_test():
 	while 1:
+<<<<<<< HEAD
+#		await go_pos(122)
+#		await go_pos(107)
+#		await go_pos(541)
+#		await go_pos(169)
+#		await go_pos(192)
+#		await go_pos(541)
+#		await go_pos(195)
+
+#		await go_pos(270)
+		await go_pos(850) #包衣
+		await go_pos(825) #压片1
+		await go_pos(805) #压片2
+#		await go_pos(785) #胶囊1
+		await go_pos(751) #胶囊2
+#		await go_pos(745) #胶囊3
+		await go_pos(729) #铝塑1
+		await go_pos(685) #铝塑2
+		await go_pos(665) #铝塑3
+		await go_pos(647) #瓶包
+		await go_pos(628) #批料
+		await go_pos(605) #制粒
+		await go_pos(880) #批混
+		await go_pos(588) #容器存放
+		await go_pos(570) #容器清洗
+		
+=======
 		await go_pos(122)
 		await go_pos(107)
 		await go_pos(541)
@@ -231,6 +300,7 @@ async def path_test():
 		await go_pos(192)
 		await go_pos(541)
 		await go_pos(195)
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 #		target_id = pointbk[0]
 #		target_id = 192
 #		print(agv.go_pos(target_id))
@@ -243,12 +313,20 @@ async def path_test():
 #				break
 #		target_id = pointbk[3]
 async def go_pos(target_pos):
+<<<<<<< HEAD
+	log.logger.info('go to new pos: '+str(target_pos))
+=======
 	logger.debug('go to new pos')
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 	target_id = target_pos
 	rec = agv.go_pos(target_id)
 	if rec == -1:
 #		print('resend path')
+<<<<<<< HEAD
+		log.logger.error('resend path')
+=======
 		logger.error('resend path')
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 		rec = agv.go_pos(target_id)
 	await asyncio.sleep(1)
 	while 1:
@@ -256,6 +334,10 @@ async def go_pos(target_pos):
 		agv.getstatus()
 		if agv.id == target_id and agv.agv_status == 'standby':
 			await asyncio.sleep(1)
+<<<<<<< HEAD
+			log.logger.info('reach to target pos: '+str(target_pos))
+=======
+>>>>>>> ac036506b9fb4e2f78dca299cff753ca9268f6fc
 			break
 
 if __name__ == '__main__':
