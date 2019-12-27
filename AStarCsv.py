@@ -1,9 +1,10 @@
 # coding: utf-8
 #!/usr/bin/python3
 #import mapxsl
-import mapxsl2 as mapxsl
-import AStar
+import mapxslfast as mapxsl
+import AStar2 as AStar
 import copy
+from collections import Counter
 import numpy as np
 #import tinyarray as np
 import operator
@@ -35,7 +36,7 @@ def Find(target):
 	# 		coord[0] = index
 	# 		coord[1] = array[index].index(target)
 	# 		return coord
-def searchpath(start, end, path_fix=0):
+def searchpath(start, end, path_fix=0, autodoor=False, radar_toggle=False):
 	#默认情况下进752经过750，空车出不经过750，进785经过789，出785不经过789。可通过设置341，750，788，789为障碍物控制路径
 	#path_fix = 1 时 空车进752，设置341为1（障碍物），fix = 。。。
 	if start not in mapTest.pointdic or end not in mapTest.pointdic:
@@ -64,10 +65,57 @@ def searchpath(start, end, path_fix=0):
 	else:
 		print("no way")
 	aStar.pathpoint = list(filter(lambda x : x!=0,aStar.pathpoint))
-	#print(aStar.pathpoint)
+	print(aStar.pathpoint)
+	if autodoor:
+			set1 = set(aStar.pathpoint)
+			set2 = set(mapTest.pointdoor)
+			set3 = list(set1 & set2)
+			set3.sort(key=aStar.pathpoint.index)
+			set40 = set(mapTest.point_radar)
+			set5 = list(set1 & set40)
+			set5.sort(key=aStar.pathpoint.index)
+			print(set5)
+			
+			set6 = list(map(lambda x:x if mapTest.point_radar_dir[x] >0 else aStar.pathpoint[aStar.pathpoint.index(x)+1], set5))
+			set7 = list(set(set6))
+#			set7.sort(key=set6.index)
+			if aStar.pathpoint[-1] == 628:
+				set7.remove(627)
+			#将方向值小于等于0的点往前挪一位，作为避障恢复。方向值大于0的点为避障关闭点，保持不变。根据当前ID跟方向确定是否关闭避障，可以达到单方向生效，返回路径不影响。
+	#		stop_point = map(lambda x:pathb(pathb.index(x)-2), set3)
+#			open_door_point = list(map(lambda x:aStar.pathpoint[aStar.pathpoint.index(x)-3], set3))
+#			wait_door_point = list(map(lambda x:aStar.pathpoint[aStar.pathpoint.index(x)-2], set3))
+#			print(aStar.pathpoint.index(set3[0]))
+#			leng = aStar.pathpoint.index(set3[0])
+			open_door_point = list(map(lambda x:aStar.pathpoint[aStar.pathpoint.index(x)-3] if aStar.pathpoint.index(x) > 2 else aStar.pathpoint[aStar.pathpoint.index(x)-aStar.pathpoint.index(x)+0], set3))
+			wait_door_point = list(map(lambda x:aStar.pathpoint[aStar.pathpoint.index(x)-2] if aStar.pathpoint.index(x) > 2 else aStar.pathpoint[aStar.pathpoint.index(x)-aStar.pathpoint.index(x)+0], set3))
+#			wait_door_point = list(map(lambda x:aStar.pathpoint[aStar.pathpoint.index(x)-2], set3))
+			close_door_point = list(map(lambda x:aStar.pathpoint[aStar.pathpoint.index(x)+1], set3))
+			set3.insert(0,0)
+			close_door_point.insert(0,0)
+			print('through_door: '+str(set3))
+			print('open_door_point: '+str(open_door_point))
+			print('wait_door_point: '+str(wait_door_point))
+			print('close_door_point: '+str(close_door_point))
+			print('point_radar: '+str(set7))
+			set4 = []
+			set4.append(set3)
+			set4.append(open_door_point)
+			set4.append(wait_door_point)
+			set4.append(close_door_point)
+			set4.append(set7)
+			return set4
+
 	return aStar.pathpoint;
+def sign(a):
+	if a < 0:
+		return -1
+	elif a > 0:
+		return 1
+	else:
+		return 0
 #十六进制最大发送60多个二维码210->289 ,字节数254
-def configpath(pathb,direct,endir=0, back=True, maxlen = 60):
+def configpath(pathb,direct,endir=0, back=True, maxlen = 60, lift=None):
 	if isinstance(pathb, str):
 		return pathb, 0
 	pathex = bytearray(b'\x00\x01\x0c')
@@ -88,8 +136,15 @@ def configpath(pathb,direct,endir=0, back=True, maxlen = 60):
 		pp = p
 		pathex2.append(path[p]//256)
 		pathex2.append(path[p]%256)
+#		if p == 0 and up:
+##			pathex2.append(2)
+#			pathex2.append(2)
+#			path[p] = str(path[p])+'AA'
+#		else:
 		pathex2.append(0)
+#		pathex2.append(lambda x:3 if x == 'liftup' else 0, lift)
 		pathex2.append(1)
+		
 		
 		if len(pathex2) > 59*4:
 			pass
@@ -99,9 +154,20 @@ def configpath(pathb,direct,endir=0, back=True, maxlen = 60):
 		if p == 0:
 			p1[0] = p2[0]+arrows[direct-1][0]
 			p1[1] = p2[1]+arrows[direct-1][1]
-			pp = (p3 - p2) - (p2 - p1)
+#			sign = lambda x:[1, -1][x < 0]
+				
+			pp22 = p3 - p2
+			
+#			pp23 = p3 - p2
+			pp22[0] = sign(pp22[0])
+			pp22[1] = sign(pp22[1])
+			pp = pp22 - (p2 - p1)
+#			pp = pp23 - (p2 - p1)
+			
 			#print(pp)
 			if abs(pp[0]) == 2 or abs(pp[1]) == 2:
+			#如果掉头点后面是虚拟点pp[0],pp[1]绝对值将大于2，故判定条件设为大于1
+#			if (abs(pp[0]) > 1 and pp[1] == 0) or (abs(pp[1]) > 1 and pp[0] == 0):
 				path[p] = str(path[p])+'LD'
 				pathex2[-2] = 7
 				#pathex2[-1] = bytes(1)
@@ -146,7 +212,18 @@ def configpath(pathb,direct,endir=0, back=True, maxlen = 60):
 				#pathex2.append(1)
 	pathex2.append(path[-1]//256)
 	pathex2.append(path[-1]%256)
-	pathex2.append(0)
+#	if action == 'liftdown':
+#	pathex2.append(18)
+	if lift == 'liftup':
+		pathex2.append(2)
+#		path[-1] = str(path[-1])+'AA'
+	elif lift == 'liftdown':
+		pathex2.append(3)
+#		path[-1] = str(path[-1])+'aa'
+	else:
+		pathex2.append(0)
+#	pathex2.append(0)
+#	pathex2.append(lambda x:0x18 if x == 'liftup' else 0, lift)
 	pathex2.append(0)
 	#pathex2[-1] = 0
 	pathex.append(len(pathex2)//256)
@@ -159,28 +236,41 @@ def configpath(pathb,direct,endir=0, back=True, maxlen = 60):
 		try:
 			# if mapTest.pointbk.index(path[-1]):
 			if path[-1] in mapTest.pointdicbk:
-				if path[-1] == 571:
-					path[-2] = '570BR'
-					#print(pathex[-6])
-					pathex[-6] = 0x22
-				elif path[-1] == 729:
-					path[-2] = '729BL'
-					pathex[-6] = 0x21
+#				if len(path) == 2:
+				if isinstance(path[-2], int):
+					path[-2] = str(path[-2])+'BB'
+					pathex[-6] = 0x20
+				elif path[-2][-2:] == 'LD':
+					path[-2] = path[-2][:3] + 'BK'
+					pathex[-6] = 0x17
 				elif path[-1] == 785:
 					path[-3] = '787BR'
 					pathex[-10] == 0x22
-				elif path[-1] == 752:
-					path[-2] = '751BR'
-					pathex[-6] = 0x22
-				elif path[-1] == 204:
-					path[-2] = '205BR'
-					pathex[-6] = 0x22
-				elif path[-1] == 206:
-					path[-2] = '207BL'
+				elif path[-2][-2:] == 'RR':
+					path[-2] = path[-2][:3] + 'BL'
 					pathex[-6] = 0x21
-				else:
-					path[-2] = str(path[-2])+'BB'
-					pathex[-6] = 0x20
+				elif path[-2][-2:] == 'LL':
+					path[-2] = path[-2][:3] + 'BR'
+					pathex[-6] = 0x22
+#				elif path[-1] == 571:
+#					path[-2] = '570BR'
+#					#print(pathex[-6])
+#					pathex[-6] = 0x22
+#				elif path[-1] == 729:
+#					path[-2] = '729BL'
+#					pathex[-6] = 0x21
+#				elif path[-1] == 752:
+#					path[-2] = '751BR'
+#					pathex[-6] = 0x22
+#				elif path[-1] == 204:
+#					path[-2] = '205BR'
+#					pathex[-6] = 0x22
+#				elif path[-1] == 206:
+#					path[-2] = '207BL'
+#					pathex[-6] = 0x21
+#				else:
+#					path[-2] = str(path[-2])+'BB'
+#					pathex[-6] = 0x20
 		#except ValueError as error:
 		except Exception as e:
 			pass
@@ -197,6 +287,15 @@ def configpath(pathb,direct,endir=0, back=True, maxlen = 60):
 	# pathex.append(check)
 	pathex = check(pathex)
 	#check = operator.invert(check)
+	if lift == 'liftup':
+#		pathex2.append(3)
+		path[-1] = str(path[-1])+'AA'
+	elif lift == 'liftdown':
+#			pathex2.append(2)
+		path[-1] = str(path[-1])+'aa'
+	else:
+		pass
+#			pathex.append(0)
 	path = '->'.join(str(i) for i in path)
 	#print(pathex)
 	return path,pathex;
@@ -220,6 +319,14 @@ def action(*action):
 	elif action[0] == 'discharge':
 		data = bytearray(b'\x00\x01\x03\x00\x02\x03\x00') #0x0 0x1 0x3 0x0 0x2 0x3 0x0 0xfc
 		return check(data)
+	elif action[0] == 'up':
+		data = bytearray(b'\x00\x01\x0c\x00\x00\x01\x01')
+		data.append(action[1]//256)
+		data.append(action[1]%256)
+		data.append(2)
+		data.append(0)
+		return check(data)
+		
 	elif action[0] == 'radar' and len(action) == 4:
 		data= bytearray(b'\x00\x01\x04\x00\x03')
 		data.append(int(action[1]))
@@ -257,21 +364,44 @@ def get_point():
 	return mapTest.pointdic
 def test(time = 1):
 	for i in range(0,time):
-		path,pathex = configpath(searchpath(208, 206), 2)
+		path,pathex = configpath(searchpath(208, 206), 2, lift='liftup')
 		#print('time .')
 if __name__ == '__main__':
 	##构建地图
 	#mapTest = mapxsl.mapcsv();
-	mapTest.showMap();
+#	mapTest.showMap();
 	##构建A*
 	#print(configpath(searchpath(206, 207),4))
 	#test(100)
 	#path,pathex = configpath(searchpath(447, 447), 4)
 	start = time.time()
 	print(time)
-	path,pathex = configpath(searchpath(117, 107), 4)
+#	path,pathex = configpath(searchpath(117, 107), 4)
+#	path = searchpath(270, 850)
+#	a = set(path)
+#	b = set(mapTest.pointdoor)
+#	print(a & b)
+#	c = Counter(path)
+#	c2 = Counter(mapTest.pointdoor)
+##	print(mapTest.pointdoor)
+##	c.subtract(Counter(mapTest.pointdoor))
+#	diff = c2 - c
+#	
+#	print(list(diff.elements()))
+#	set3 = searchpath(685, 729, autodoor=True)
+#	print(set3)
+#	set3 = searchpath(247, 628, autodoor=True)
+#	print(set3)
+#	set3 = searchpath(246, 628, autodoor=True)
+#	print(set3)
+#	set3 = searchpath(729, 605, autodoor=True)
+#	print(set3)
+#	path,pathex = configpath(searchpath(289, 150), 2, lift='liftup')
+	path,pathex = configpath(searchpath(109, 468), 2)
 	print('robot path '+path)
-	# print(len(pathex))
+	print(len(pathex))
+	print(pathex)
+	print(" ".join(map(hex,pathex)))
 	end = time.time()
 	print('CPU执行时间: ', end - start)
 #	start = time.time()
@@ -301,7 +431,8 @@ if __name__ == '__main__':
 	#print(pathexascii)
 	
 	#action = action('radar',136,80,80)
-	action = action('discharge')
+#	action = action('discharge')
+	action = action('resume')
 	print(" ".join(map(hex,action)))
 '''
 	aStar = AStar.AStar(mapTest, AStar.Node(AStar.Point(20,40)), AStar.Node(AStar.Point(7,0)))
